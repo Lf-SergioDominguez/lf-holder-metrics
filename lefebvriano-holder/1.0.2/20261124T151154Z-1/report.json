@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "plugin_version": "1.0.2",
+  "variant": "private",
+  "profile": "web",
+  "frequency": "weekly",
+  "period": {
+    "from": "2026-11-17T15:11:54.225Z",
+    "to": "2026-11-24T15:11:54.225Z"
+  },
+  "sessions": 59,
+  "requests": 273,
+  "turns": 2059,
+  "tokens": {
+    "input": 4434,
+    "output": 1534225,
+    "cache_read": 171312888,
+    "cache_write": 7372828,
+    "per_request": 660163
+  },
+  "first_turn_context_tokens": 35607,
+  "autocompact_sessions_pct": 7,
+  "permissions": {
+    "ask": 31,
+    "deny": 11
+  },
+  "hook_errors": 0
+}
