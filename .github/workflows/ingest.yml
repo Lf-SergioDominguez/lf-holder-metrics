@@ -1,0 +1,59 @@
+name: ingest-telemetry
+
+on:
+  issues:
+    types: [opened]
+
+# Una ingesta a la vez: todas hacen push a main.
+concurrency:
+  group: ingest-telemetry
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  ingest:
+    # Título y etiqueta solo filtran; la validación real la hace scripts/ingest.mjs contra el schema.
+    if: startsWith(github.event.issue.title, 'telemetry ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # El evento se lee del fichero GITHUB_EVENT_PATH: el cuerpo de la issue nunca se interpola en el shell.
+      - id: ingest
+        run: node scripts/ingest.mjs
+
+      - name: Commit del informe
+        if: steps.ingest.outputs.status == 'ok'
+        env:
+          REPORT_FILE: ${{ steps.ingest.outputs.file }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$REPORT_FILE"
+          git commit -m "chore(data): ingest telemetry report from issue #$ISSUE_NUMBER"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Comentar y cerrar
+        if: always() && steps.ingest.outputs.status != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          MESSAGE_FILE: ${{ steps.ingest.outputs.message_file }}
+          STATUS: ${{ steps.ingest.outputs.status }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body-file "$MESSAGE_FILE"
+          if [ "$STATUS" = ok ]; then
+            gh issue close "$ISSUE_NUMBER" --reason completed
+          else
+            gh issue close "$ISSUE_NUMBER" --reason "not planned"
+          fi
